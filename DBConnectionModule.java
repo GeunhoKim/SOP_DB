@@ -1,20 +1,28 @@
+import org.apache.cassandra.thrift.*;
+import org.apache.cassandra.utils.ByteBufferUtil;
+import org.apache.thrift.TException;
 import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
- * Geunho Khim
- * Date: 10/11/13
- * Time: 6:43 PM
+ * @author  Geunho Khim
+ * @created 10/11/13, 6:43 PM
+ * @updated 11/21/13
  *
  *  test module to test Cassandra I/O
  */
 public class DBConnectionModule {
   private static DBConnectionModule instance = new DBConnectionModule();
+  private static Connector thriftConnector = new Connector();
 
   public static DBConnectionModule getInstance() {
     return instance;
@@ -241,6 +249,7 @@ public class DBConnectionModule {
    *
    *    첫 primary key가 유저 아이디이므로 한 유저의 모든 선호도를 바로 가져올 수 있는 장점이 있다.
    *
+   *  TODO: Sticky cf의 like 컬럼을 increment 해야한다.
    */
   public void addPreference(String user_id, String f_id, String url, Connection conn) throws SQLException {
     Statement stmt = null;
@@ -266,8 +275,8 @@ public class DBConnectionModule {
 
   /**
    *
-   * @param limit, connection
-   * @return list of URL
+   * @param   limit, connection
+   * @return  list of URL
    *
    * @throws SQLException
    *
@@ -305,5 +314,56 @@ public class DBConnectionModule {
 
     System.out.println(urls.toString());
 
+  }
+
+  /**
+   *
+   * @param   url
+   * @return  similar url list
+   *
+   *  get most similar urls of target url.
+   *
+   * CF: Recommendation
+   *  RowKey: target url
+   *    (column name: similar url, value: similarity)
+   *
+   *   반환 타입이 Map으로, 유사도를 key 값으로 오름차순 정렬되어 있다. TreeMap으로 casting 하여 반환한다면
+   *   pollLastEntry() 메소드로 큰 값부터 가져올 수 있다.
+   *
+   */
+  public Map<Double, String> getRecommendation(String url)
+          throws TException, InvalidRequestException, UnavailableException, TimedOutException, CharacterCodingException {
+    TreeMap<Double, String> recommendList = new TreeMap<Double, String>();
+    Cassandra.Client client = thriftConnector.connect();
+    ByteBuffer key = ByteBufferUtil.bytes(url);
+
+    SlicePredicate predicate = new SlicePredicate();
+    SliceRange sliceRange = new SliceRange();
+    sliceRange.setStart(new byte[0]);
+    sliceRange.setFinish(new byte[0]);
+    predicate.setSlice_range(sliceRange);
+
+    String columnFamily = "Recommendation";
+    ColumnParent parent = new ColumnParent(columnFamily);
+
+    List<ColumnOrSuperColumn> cols = client.get_slice(key, parent, predicate, ConsistencyLevel.ONE);
+
+    for (ColumnOrSuperColumn cosc : cols) {
+      Column column = cosc.column;
+      String recommend = ByteBufferUtil.string(column.name);
+      Double similarity = ByteBufferUtil.toDouble(column.value);
+
+      recommendList.put(similarity, recommend);
+    }
+
+    return recommendList;
+  }
+  @Test
+  public void testGetRecommendation()
+          throws UnavailableException, TException, InvalidRequestException, TimedOutException, CharacterCodingException {
+    String url = "http://en.wikipedia.org/wiki/$1_Money_Wars";
+    Map<Double, String> recommends = getRecommendation(url);
+
+    System.out.println(recommends.toString());
   }
 }
