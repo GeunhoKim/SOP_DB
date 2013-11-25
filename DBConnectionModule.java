@@ -16,7 +16,7 @@ import java.util.TreeMap;
 /**
  * @author  Geunho Khim
  * @created 10/11/13, 6:43 PM
- * @updated 11/21/13
+ * @updated 11/25/13
  *
  *  test module to test Cassandra I/O
  */
@@ -32,7 +32,7 @@ public class DBConnectionModule {
   public static Connection getConnection() throws Exception {
     Connection conn = null;
     final String port = "9160";
-    final String hostname = "165.246.44.92";
+    final String hostname = "localhost";
     final String keyspace = "sop_db_1";
 
     Class.forName("org.apache.cassandra.cql.jdbc.CassandraDriver");
@@ -366,4 +366,84 @@ public class DBConnectionModule {
 
     System.out.println(recommends.toString());
   }
+
+  /**
+   *
+   * @param   user_id, user_name, conn
+   * @throws  SQLException
+   *
+   *  insert user info when logging in the SOP. before insertion, check if user exists.
+   */
+  public void insertUser(String user_id, String user_name, Connection conn) throws SQLException {
+    Statement stmt = null;
+
+    if(!isUserExist(user_id, conn)) {
+      try {
+        stmt = conn.createStatement();
+        String query = "insert into \"User\"(key, user_name, sticky_count) values ('" + user_id + "', '" + user_name + "', " + 0 + ");";
+        stmt.executeUpdate(query);
+
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+
+      stmt.close();
+    } else {
+      System.out.println(user_id + " already exists.");
+    }
+  }
+  @Test
+  public void testInsertUser() throws Exception {
+    insertUser("geunho.khim@gmail.com", "geunhokim", getConnection());
+  }
+
+  /**
+   *
+   * @param   user_id, conn
+   * @return  bool
+   * @throws SQLException
+   *
+   *  check if user info already exists before insert user cf
+   */
+  public boolean isUserExist(String user_id, Connection conn) throws SQLException {
+    Statement stmt = null;
+    ResultSet rs = null;
+
+    try {
+    stmt = conn.createStatement();
+    String query = "select count(*) from \"User\" where key = '" + user_id + "';";
+    stmt.executeQuery(query);
+    rs = stmt.getResultSet();
+
+    if(rs.getInt(1) == 1) {
+      return true;
+    }
+
+  } catch (Exception e) {
+    e.printStackTrace();
+  }
+
+  rs.close();
+  stmt.close();
+
+  return false;
+  }
+  @Test
+  public void testIsUserExist() throws Exception {
+    boolean isExist = isUserExist("geunho.khim@gmail.com", getConnection());
+    System.out.println(isExist);
+  }
+
+  public void updateUser(String created, String url, String content, Connection conn) {
+    Statement stmt = null;
+
+    try {
+      stmt = conn.createStatement();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+  }
+
 }
