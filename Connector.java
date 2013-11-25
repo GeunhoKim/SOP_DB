@@ -12,7 +12,7 @@ import org.apache.thrift.transport.TTransport;
  *   Low level client, Thrift connection wrapper
  */
 public class Connector {
-	TTransport tr = new TSocket("localhost", 9160);
+	TTransport tr = new TSocket("165.246.44.92", 9160);
 	
 	// returns a new connection to our keyspace
 	public Cassandra.Client connect() throws TException, InvalidRequestException {
