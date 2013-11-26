@@ -49,7 +49,7 @@ public class TestPerformance {
       url = String.valueOf(i);
       for(int j = 0; j < m[i]; j++) {
         user = String.valueOf((int) (Math.random() * 1000) + 1); // 1 ~ 1000까지 랜덤한 숫자를 유저 아이디로 한다.
-        dbcm.writeSticky(url, user, "스티키테스트: "+user, conn);
+        dbcm.writeSticky(url, user, "스티키테스트: "+user, "geunho", conn);
       }
     }
   }

@@ -15,7 +15,7 @@ import java.util.Date;
 /**
  * @author  Geunho Khim
  * @created 10/11/13, 6:43 PM
- * @updated 11/26/13
+ * @updated 11/27/13
  *
  *  test module to test Cassandra I/O
  */
@@ -29,15 +29,46 @@ public class DBConnectionModule {
 
   // Connection method. (port / hostname / keyspace) are depend on the environment.
   public static Connection getConnection() throws Exception {
-    Connection conn = null;
-    final String port = "9160";
-    final String hostname = "165.246.44.92";
-    final String keyspace = "sop_db_1";
+    return getConnection("165.246.44.92", "sop_db_1", "9160");
+  }
+
+  public static Connection getConnection(String _hostname, String _keyspace, String _port) throws Exception {
+    Connection conn;
+    final String port = _port;
+    final String hostname = _hostname;
+    final String keyspace = _keyspace;
 
     Class.forName("org.apache.cassandra.cql.jdbc.CassandraDriver");
     conn = DriverManager.getConnection("jdbc:cassandra://" + hostname +":"+ port +"/"+ keyspace);
 
     return conn;
+  }
+
+  /**
+   *  Sticky cf 에 새로 추가한 user_name 컬럼 값을 채우기 위한 테스트 함수
+   */
+  @Test
+  public void updateUserName() throws Exception {
+    List<String> urls = getURLs(100, getConnection());
+
+    for(String url : urls) {
+      List<Sticky> stickies = getAllStickies(url, getConnection());
+
+      for(Sticky sticky : stickies) {
+        String user_id = sticky.getUserID();
+        String user_name = "";
+
+        if(user_id.equals("Idontknow") || user_id.equals("geunho.khim@gmail.com"))
+          user_name = "근호";
+        if(user_id.equals("naheon.kim"))
+          user_name = "나헌";
+        if(user_id.equals("100001840897145") || user_id.equals("F100001840897145") || user_id.equals("K.SW.Engineer"))
+          user_name = "성원";
+
+        updateSticky(sticky.getURL(), user_id, user_name, sticky.getTimestamp().getTime(), getConnection());
+      }
+
+    }
   }
 
   /**
@@ -95,22 +126,20 @@ public class DBConnectionModule {
    *  스티키를 텝 했을때 Sticky 객체로부터 url, userID, timestamp 들을 가져온다. 이 세 항목이 하나의 스티키를 나타내는 composite key 이다.
    *  writeSticky 메소드와 다른점은 addURL 메소드를 호출하지 않는다는 점이다. (URL의 스티키 카운트는 변동 없으므로)
    *  또한 timestamp(created) 는 composite key의 일부이므로 업데이트 될 수 없다.
+   *
+   *  --> 스티키 내용의 갱신 기능은 생략할 예정. 따라서 해당 메소드는 null 값의 user_name 컬럼을 갱신하는데 이용한다.
    */
   @Deprecated
-  public void updateSticky(String url, String userID, String user_name, long created, String sticky, Connection conn) throws SQLException {
+  public void updateSticky(String url, String userID, String user_name, long created, Connection conn) throws SQLException {
     Statement stmt = null;
 
     try {
       stmt = conn.createStatement();
-      long ts = System.currentTimeMillis();
 
-      String query = "update \"Sticky\" set  sticky = '" + sticky + "'" +
+      String query = "update \"Sticky\" set  user_name = '" + user_name + "'" +
               " where url = '" + url + "' and user_id = '" + userID + "' and created = " + created +";";
 
-      if(stmt.executeUpdate(query) == 1) {
-        updateUptodate(userID, user_name, ts, url, sticky, conn);
-      }
-
+      stmt.executeUpdate(query);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -327,7 +356,7 @@ public class DBConnectionModule {
 
     try {
       stmt = conn.createStatement();
-      String query = "select url from \"URL\" limit " + limit;
+      String query = "select key from \"URL\" limit " + limit;
       stmt.executeQuery(query);
       rs = stmt.getResultSet();
 

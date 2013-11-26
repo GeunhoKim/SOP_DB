@@ -1,9 +1,6 @@
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 /**
  * @author  Geunho Khim
@@ -12,6 +9,11 @@ import java.util.Random;
  */
 public class HelperClass {
 
+  /**
+   *
+   * @param   users, number of randoms
+   * @return  list of random number of users
+   */
   public static List<String> getRandFriends(List<String> users, int max) {
     List<String> result = new ArrayList<String>();
     int size = users.size();
@@ -54,6 +56,29 @@ public class HelperClass {
     for(String id : randFriends) {
       System.out.println(id);
     }
+  }
+
+  /**
+   *
+   * @param   stickies
+   * @return  sorted stickies
+   *
+   *  sort stickies by 'like' column.
+   */
+  public static List<Sticky> sortStickyByLike(List<Sticky> stickies) {
+    Collections.sort(stickies, new Comparator<Sticky>() {
+      @Override
+      public int compare(Sticky sticky, Sticky sticky2) {
+        int a = sticky.getLike();
+        int b = sticky2.getLike();
+
+        return a < b ? -1
+                : a > b ? 1
+                : 0;
+      }
+    });
+
+    return stickies;
   }
 
 }

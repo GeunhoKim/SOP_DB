@@ -1,11 +1,13 @@
 import java.util.Date;
 
 /**
- * Geunho Khim
- * Date: 10/14/13
- * Time: 2:14 PM
+ * @author  Geunho Khim
+ * @created 10/14/13, 2:14 PM
+ * @updated 11/27/13
+ *
+ *  default comparable property is timestamp.
  */
-public class Sticky {
+public class Sticky implements Comparable<Sticky> {
   private String url;
   private String userID;
   private String userName;
@@ -64,6 +66,17 @@ public class Sticky {
 
   @Override
   public String toString() {
-    return getURL() + ", " + getUserID() + ", " + getUserName() + ", " + getMemo() + ", " + getTimestamp();
+    return "[" + getURL() + ", " + getUserID() + ", " + getUserName() + ", " + getMemo() + ", " + getTimestamp() + "]";
+  }
+
+  // compare class by timestamp
+  @Override
+  public int compareTo(Sticky sticky) {
+    long a = this.getTimestamp().getTime();
+    long b = sticky.getTimestamp().getTime();
+
+    return a < b ? -1
+         : a > b ? 1
+         : 0;
   }
 }
