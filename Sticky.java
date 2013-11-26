@@ -8,15 +8,17 @@ import java.util.Date;
 public class Sticky {
   private String url;
   private String userID;
+  private String userName;
   private String memo;
   private Date created;
   private int like;
 
   public Sticky() {
   }
-  public Sticky(String url, String userID, String memo, Date created, int like) {
+  public Sticky(String url, String userID, String userName, String memo, Date created, int like) {
     this.url = url;
     this.userID = userID;
+    this.userName = userName;
     this.memo = memo;
     this.created = created;
     this.like = like;
@@ -27,6 +29,9 @@ public class Sticky {
   }
   public void setUser(String userID) {
     this.userID = userID;
+  }
+  public void setUserName(String userName) {
+    this.userName = userName;
   }
   public void setMemo(String memo) {
     this.memo = memo;
@@ -44,6 +49,9 @@ public class Sticky {
   public String getUserID() {
     return this.userID;
   }
+  public String getUserName() {
+    return this.userName;
+  }
   public String getMemo() {
     return this.memo;
   }
@@ -56,6 +64,6 @@ public class Sticky {
 
   @Override
   public String toString() {
-    return getURL() + ", " + getUserID() + ", " + getMemo() + ", " + getTimestamp();
+    return getURL() + ", " + getUserID() + ", " + getUserName() + ", " + getMemo() + ", " + getTimestamp();
   }
 }

@@ -57,19 +57,20 @@ public class DBConnectionModule {
    *  2. Update(Insert) URL --> sticky_counter++
    *
    */
-  public void writeSticky(String url, String userID, String sticky, Connection conn) throws SQLException {
+  public void writeSticky(String url, String userID, String sticky, String user_name, Connection conn) throws SQLException {
     Statement stmt = null;
 
     try {
       stmt = conn.createStatement();
       long ts = System.currentTimeMillis();
 
-      String query = "insert into \"Sticky\"(url, user_id, sticky, created, like) values" +"('"+ url +"','"+ userID +"','"+ sticky +"',"+ ts +","+ 0 +");";
+      String query = "insert into \"Sticky\"(url, user_id, sticky, created, like, user_name) values"
+              +"('"+ url +"','"+ userID +"','"+ sticky +"',"+ ts +","+ 0 +",'"+ user_name +"');";
       stmt.executeUpdate(query);
 
       // additional update methods
       addURL(url, 0, 1, conn); // update url sticky count
-      updateUptodate(userID, ts, url, sticky, conn); // update user's latest sticky
+      updateUptodate(userID, user_name, ts, url, sticky, conn); // update user's latest sticky
       addUrlToUser(userID, url); // add user's url list
 
     }  catch (Exception e) {
@@ -82,7 +83,7 @@ public class DBConnectionModule {
   public void testWriteSticky() throws Exception {
     Connection conn = getConnection();
     writeSticky("http://www.datastax.com/docs/1.1/references/cql/cql_data_types",
-            "geunho.khim@gmail.com", "Four more test.", conn);
+            "geunho.khim@gmail.com", "Four more test.", "geunho", conn);
   }
 
   /**
@@ -95,7 +96,8 @@ public class DBConnectionModule {
    *  writeSticky 메소드와 다른점은 addURL 메소드를 호출하지 않는다는 점이다. (URL의 스티키 카운트는 변동 없으므로)
    *  또한 timestamp(created) 는 composite key의 일부이므로 업데이트 될 수 없다.
    */
-  public void updateSticky(String url, String userID, long created, String sticky, Connection conn) throws SQLException {
+  @Deprecated
+  public void updateSticky(String url, String userID, String user_name, long created, String sticky, Connection conn) throws SQLException {
     Statement stmt = null;
 
     try {
@@ -106,7 +108,7 @@ public class DBConnectionModule {
               " where url = '" + url + "' and user_id = '" + userID + "' and created = " + created +";";
 
       if(stmt.executeUpdate(query) == 1) {
-        updateUptodate(userID, ts, url, sticky, conn);
+        updateUptodate(userID, user_name, ts, url, sticky, conn);
       }
 
     } catch (Exception e) {
@@ -130,7 +132,7 @@ public class DBConnectionModule {
 
     try {
       stmt = conn.createStatement();
-      String query = "select user_id, created, like, sticky from \"Sticky\" where url = '" + url + "' and user_id = '" + user +"';";
+      String query = "select user_id, user_name, created, like, sticky from \"Sticky\" where url = '" + url + "' and user_id = '" + user +"';";
       rs = stmt.executeQuery(query);
     } catch (SQLException e) {
       e.printStackTrace();
@@ -142,9 +144,10 @@ public class DBConnectionModule {
       Sticky sticky = new Sticky();
       sticky.setURL(url);
       sticky.setUser(rs.getString(1));
-      sticky.setTimestamp(rs.getDate(2));
-      sticky.setLike(rs.getInt(3));
-      sticky.setMemo(rs.getString(4));
+      sticky.setUserName(rs.getString(2));
+      sticky.setTimestamp(rs.getDate(3));
+      sticky.setLike(rs.getInt(4));
+      sticky.setMemo(rs.getString(5));
       stickies.add(sticky);
     }
 
@@ -177,7 +180,7 @@ public class DBConnectionModule {
 
     try {
       stmt = conn.createStatement();
-      String query = "select user_id, created, like, sticky from \"Sticky\" where url = '" + url + "';";
+      String query = "select user_id, user_name, created, like, sticky from \"Sticky\" where url = '" + url + "';";
       rs = stmt.executeQuery(query);
     } catch (SQLException e) {
       e.printStackTrace();
@@ -189,9 +192,10 @@ public class DBConnectionModule {
       Sticky sticky = new Sticky();
       sticky.setURL(url);
       sticky.setUser(rs.getString(1));
-      sticky.setTimestamp(rs.getDate(2));
-      sticky.setLike(rs.getInt(3));
-      sticky.setMemo(rs.getString(4));
+      sticky.setUserName(rs.getString(2));
+      sticky.setTimestamp(rs.getDate(3));
+      sticky.setLike(rs.getInt(4));
+      sticky.setMemo(rs.getString(5));
       stickies.add(sticky);
     }
 
@@ -501,12 +505,12 @@ public class DBConnectionModule {
    *  update uptodate column in User cf. used in writeSticky method
    * uptodate 컬럼의 데이터는 created::url::content 의 형식으로 저장된다. (초기 화면에서 이용할 때 '::' 로 스트링을 파싱한다.
    */
-  public void updateUptodate(String user_id, long created, String url, String content, Connection conn) throws SQLException {
+  public void updateUptodate(String user_id, String user_name, long created, String url, String content, Connection conn) throws SQLException {
     Statement stmt = null;
 
     try {
       stmt = conn.createStatement();
-      String query = "update \"User\" set sticky_count = " +(getUserStickyCount(user_id, conn) + 1)+ ", uptodate = '" + created + "::" + url + "::" + content + "' where key = '" + user_id + "';";
+      String query = "update \"User\" set sticky_count = " +(getUserStickyCount(user_id, conn) + 1)+ ", uptodate = '" + created + "::" + url + "::" + user_name + "::" + content + "' where key = '" + user_id + "';";
       stmt.executeUpdate(query);
 
     } catch (Exception e) {
@@ -584,7 +588,8 @@ public class DBConnectionModule {
 
     sticky.setTimestamp(new Date(Long.parseLong(parsed[0])));
     sticky.setURL(parsed[1]);
-    sticky.setMemo(parsed[2]);
+    sticky.setUser(parsed[2]);
+    sticky.setMemo(parsed[3]);
 
     return sticky;
   }
