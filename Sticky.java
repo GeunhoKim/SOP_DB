@@ -1,3 +1,6 @@
+package com.inha.stickyonpage.db;
+
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -7,7 +10,7 @@ import java.util.Date;
  *
  *  default comparable property is timestamp.
  */
-public class Sticky implements Comparable<Sticky> {
+public class Sticky implements Comparable<Sticky>, Serializable {
   private String url;
   private String userID;
   private String userName;

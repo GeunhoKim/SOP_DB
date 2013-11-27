@@ -1,3 +1,5 @@
+package com.inha.stickyonpage.db;
+
 import org.apache.cassandra.thrift.*;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.thrift.TException;
@@ -233,6 +235,38 @@ public class DBConnectionModule {
 
     return stickies;
   }
+  
+  public List<Sticky> getAllStickies(Connection conn) throws SQLException {
+	    Statement stmt = null;
+	    ResultSet rs = null;
+
+	    try {
+	      stmt = conn.createStatement();
+	      String query = "select user_id, user_name, created, like, sticky, url from \"Sticky\";";
+	      rs = stmt.executeQuery(query);
+	    } catch (SQLException e) {
+	      e.printStackTrace();
+	    }
+
+	    List<Sticky> stickies = new ArrayList<Sticky>();
+
+	    while(rs.next()) {
+	      Sticky sticky = new Sticky();
+	      sticky.setUser(rs.getString(1));
+	      sticky.setUserName(rs.getString(2));
+	      sticky.setTimestamp(rs.getDate(3));
+	      sticky.setLike(rs.getInt(4));
+	      sticky.setMemo(rs.getString(5));
+	      sticky.setURL(rs.getString(6));
+	      stickies.add(sticky);
+	    }
+
+	    rs.close();
+	    stmt.close();
+
+	    return stickies;
+	  }
+  
   @Test
   public void testGetAllStickies() throws Exception {
     Connection conn = getConnection();
@@ -321,7 +355,8 @@ public class DBConnectionModule {
       countLike(url, user_id, created, stmt, conn);
 
       long ts = System.currentTimeMillis();
-      String query = "insert into \"Preference\"(user_id, f_id, url, created) values('" + user_id +"','"+ f_id + "','" + url + "','" + ts + "');";
+      String query = "insert into \"Preference\"(user_id, f_id, url, created) values('" + user_id +"','"+ f_id + "','" + url + "'," + ts + ");";
+      System.out.println(query);
       stmt.executeUpdate(query);
 
     } catch (SQLException e) {
@@ -334,6 +369,7 @@ public class DBConnectionModule {
   private void countLike(String url, String userID, long created, Statement stmt, Connection conn) throws SQLException {
 
     String query = "select like from \"Sticky\" where url = '" + url + "' and user_id = '" + userID + "' and created = " + created + ";";
+    System.out.println(query);
     int likeCount = stmt.executeQuery(query).getInt(1);
     String updateQuery = "update \"Sticky\" set like = " + (likeCount + 1) +
             " where url = '" + url + "' and user_id = '" + userID + "' and created = " + created + ";";
@@ -588,7 +624,7 @@ public class DBConnectionModule {
    * @throws  SQLException
    *
    *  get latest sticky of User cf. SOP 의 처음 페이지에서 사용된다.
-   * TODO: 속도가 느리므로 처음 로딩 화면에서 전부 불러온 후 화면을 구성하는 방법을 이용한다. --> 한정된 랜덤수의 친구를 선별해 가져오기
+   * TODO: 속도가 느리므로 처음 로딩 화면에서 전부 불러온 후 화면을 구성하는 방법을 이용한다.
    */
   public Sticky getLatestSticky(String userID, Connection conn) throws SQLException {
     Statement stmt = null;
