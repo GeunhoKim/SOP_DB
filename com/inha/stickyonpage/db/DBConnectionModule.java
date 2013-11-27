@@ -3,10 +3,7 @@ package com.inha.stickyonpage.db;
 import org.apache.cassandra.thrift.*;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.thrift.TException;
-import org.junit.Test;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -17,11 +14,12 @@ import java.util.Date;
 /**
  * @author  Geunho Khim
  * @created 10/11/13, 6:43 PM
- * @updated 11/27/13
+ * @updated 11/28/13
  *
- *  test module to test Cassandra I/O
+ *  Cassandra database controller for Sticky On Page
  */
 public class DBConnectionModule {
+
   private static DBConnectionModule instance = new DBConnectionModule();
   private static Connector thriftConnector = new Connector();
 
@@ -47,48 +45,24 @@ public class DBConnectionModule {
   }
 
   /**
-   *  Sticky cf 에 새로 추가한 user_name 컬럼 값을 채우기 위한 테스트 함수
-   */
-  @Test
-  public void updateUserName() throws Exception {
-    List<String> urls = getURLs(100, getConnection());
-
-    for(String url : urls) {
-      List<Sticky> stickies = getAllStickies(url, getConnection());
-
-      for(Sticky sticky : stickies) {
-        String user_id = sticky.getUserID();
-        String user_name = "";
-
-        if(user_id.equals("Idontknow") || user_id.equals("geunho.khim@gmail.com"))
-          user_name = "근호";
-        if(user_id.equals("naheon.kim"))
-          user_name = "나헌";
-        if(user_id.equals("100001840897145") || user_id.equals("F100001840897145") || user_id.equals("K.SW.Engineer"))
-          user_name = "성원";
-
-        updateSticky(sticky.getURL(), user_id, user_name, sticky.getTimestamp().getTime(), getConnection());
-      }
-
-    }
-  }
-
-  /**
    *
-   * @param url, userID, sticky, connection
-   * @throws SQLException
+   * @param   url, userID, sticky, user name, conn
+   * @throws  SQLException
    *
-   *  Insert sticky memo to the "Sticky" CF. (by CQL)
-   *    CF: Sticky
-   *      Key: url,userID,created {
-   *       (column_name: "userID", value: userID)
-   *       (column_name: "sticky", value: sticky)
-   *       (column_name: "created", value: timestamp)
+   *  insert sticky memo to the "Sticky" cf.
+   *    cf: Sticky
+   *      key: url,userID,created {
+   *       (column: "user_id",   value: userID)
+   *       (column: "user_name", value: userName)
+   *       (column: "sticky",    value: sticky)
+   *       (column: "created",   value: timestamp)
    *      }
    *
-   *  1. Insert Sticky
-   *  2. Update(Insert) URL --> sticky_counter++
-   *
+   *  write data below:
+   *   - insert sticky to Sticky cf
+   *   - update(insert) URL --> sticky_counter++
+   *   - update uptodate column of User cf
+   *   - add url to User cf
    */
   public void writeSticky(String url, String userID, String sticky, String user_name, Connection conn) throws SQLException {
     Statement stmt = null;
@@ -112,17 +86,11 @@ public class DBConnectionModule {
 
     stmt.close();
   }
-  @Test
-  public void testWriteSticky() throws Exception {
-    Connection conn = getConnection();
-    writeSticky("http://www.datastax.com/docs/1.1/references/cql/cql_data_types",
-            "geunho.khim@gmail.com", "Four more test.", "geunho", conn);
-  }
 
   /**
    *
-   * @param url, userID, created, sticky(updated content), conn
-   * @throws SQLException
+   * @param   url, userID, created, sticky(updated content), conn
+   * @throws  SQLException
    *
    *   update sticky's content
    *  스티키를 텝 했을때 Sticky 객체로부터 url, userID, timestamp 들을 가져온다. 이 세 항목이 하나의 스티키를 나타내는 composite key 이다.
@@ -187,21 +155,12 @@ public class DBConnectionModule {
 
     return stickies;
   }
-  @Test
-  public void testGetStickies() throws Exception {
-    Connection conn = getConnection();
-    List<Sticky> stickies = getStickies("http://wsnews.co.kr/society/index_view.php?zipEncode===am1udoX0tB152x3vwA2zImX0tB15KmLrxyJzsn90wDoftz0f2yMetpSfMvWLME", "geunho.khim@gmail.com", conn);
-    System.out.println("(url, user_id, created, like, sticky)");
-    for(Sticky sticky : stickies) {
-      System.out.println(sticky.getURL() +", "+ sticky.getUserID() +", "+ sticky.getTimestamp() +", "+ sticky.getLike() +", "+ sticky.getMemo());
-    }
-  }
 
   /**
    *
-   * @param url, conn
-   * @return all stickies of url
-   * @throws SQLException
+   * @param   url, conn
+   * @return  all stickies of url
+   * @throws  SQLException
    *
    *  url의 모든 스티키를 가져온다.
    */
@@ -235,7 +194,7 @@ public class DBConnectionModule {
 
     return stickies;
   }
-  
+
   public List<Sticky> getAllStickies(Connection conn) throws SQLException {
 	    Statement stmt = null;
 	    ResultSet rs = null;
@@ -265,32 +224,25 @@ public class DBConnectionModule {
 	    stmt.close();
 
 	    return stickies;
-	  }
-  
-  @Test
-  public void testGetAllStickies() throws Exception {
-    Connection conn = getConnection();
-    List<Sticky> stickies = getAllStickies("http://en.wikipedia.org/wiki/Tf%E2%80%93idf", conn);
-    System.out.println("(url, user_id, created, like, sticky)");
-    for(Sticky sticky : stickies) {
-      System.out.println(sticky.getURL() +", "+ sticky.getUserID() +", "+ sticky.getTimestamp() +", "+ sticky.getLike() +", "+ sticky.getMemo());
-    }
-  }
+	}
 
   /**
    *
-   * @param url
-   * @param conn
+   * @param   url, num of extracted, num of sticky
+   * @param   conn
    *
-   *  Insert url address to the "URL" CF. (by CQL)
-   *    CF: URL
-   *      RowKey: url {
-   *        (column name: "url", value: url)
-   *        (column name: "extract_count", value: counter)
-   *        (column name: "sticky_count", value: counter)
+   *  insert url to the "URL" cf
+   *    cf: URL
+   *      key: url {
+   *        (column: "url",           value: url)
+   *        (column: "extract_count", value: counter)
+   *        (column: "sticky_count",  value: counter)
    *      }
-   *  1. insertion of counter CF is done by update query, not insert.
-   *  2. count의 업데이트
+   *
+   *  method usage:
+   *   - insertion of counter CF is done by update query, not insert.
+   *   - update counters. count++ is done by parameter s_count as 1.
+   *   - e_count is used when text extractor extracts url.
    */
   public void addURL(String url, int e_count, int s_count, Connection conn) throws SQLException {
     url = url.replace("'", "%27"); // apostrophe 를 %27로 모두 치환한다.
@@ -308,44 +260,21 @@ public class DBConnectionModule {
 
     stmt.close();
   }
-  @Test
-  /**
-   *  This test program execute inserting 5,716,808 url address of Wikipedia(en) to the URL CF.
-   */
-  public void testAddURL() throws Exception {
-    long startTime = System.currentTimeMillis();
-
-    String currentDir = System.getProperty("user.dir");
-    FileReader fr = new FileReader(currentDir + "/resource/wiki-titles-sorted.txt");
-    BufferedReader br = new BufferedReader(fr, 500); // buffer size is 500
-
-    Connection conn = getConnection();
-    String title;
-    int count = 0;
-    for(int i = 0; i < 1000; i++) {
-      title = br.readLine();
-      addURL("http://en.wikipedia.org/wiki/" + title, 0, 0, conn);
-      count++;
-      if(count%1000==0)
-        System.out.print("1");
-    }
-
-    long endTime = System.currentTimeMillis();
-    System.out.println("\nInserting " + count + " urls, took " + (endTime - startTime) + " milliseconds");
-  }
 
   /**
    *
-   * @param  user_id, f_id, url, connection
-   * @throws SQLException
+   * @param   user_id, other user id, url,
+   * @param   timestamp of sticky, connection
+   * @throws  SQLException
    *
-   *  Add preference to specific sticky, column like++ of Sticky CF.
-   *    CF: Preference
-   *      RowKey: user_id
-   *        (column name: f_id:url:created, value: null)
+   *  add preference to specific sticky, column like++ of Sticky CF.
+   *    cf: Preference
+   *      key: user_id
+   *        (column: f_id:url:created, value: null)
    *
-   *    첫 primary key가 유저 아이디이므로 한 유저의 모든 선호도를 바로 가져올 수 있는 장점이 있다.
-   *
+   *  method usage:
+   *   - store preferences of users (like logs)
+   *   - count like column in Sticky cf
    */
   public void addPreference(String user_id, String f_id, String url, long created, Connection conn) throws SQLException {
     Statement stmt = null;
@@ -380,11 +309,11 @@ public class DBConnectionModule {
    *
    * @param   limit, connection
    * @return  list of URL
-   *
    * @throws SQLException
    *
    *  get URL list limit (for test)
    */
+  @Deprecated
   public List<String> getURLs(int limit, Connection conn) throws SQLException {
     List<String> urls = new ArrayList<String>();
     Statement stmt = null;
@@ -409,15 +338,6 @@ public class DBConnectionModule {
 
     return urls;
   }
-  @Test
-  public void testGetURLs() throws Exception {
-    int limit = 10;
-    Connection conn = getConnection();
-    List<String> urls = getURLs(limit, conn);
-
-    System.out.println(urls.toString());
-
-  }
 
   /**
    *
@@ -426,11 +346,11 @@ public class DBConnectionModule {
    *
    *  get most similar urls of target url.
    *
-   * CF: Recommendation
-   *  RowKey: target url
+   * cf: Recommendation
+   *  key: target url
    *    (column name: similar url, value: similarity)
    *
-   *   반환 타입이 Map으로, 유사도를 key 값으로 오름차순 정렬되어 있다. TreeMap으로 casting 하여 반환한다면
+   *    반환 타입이 Map으로, 유사도를 key 값으로 오름차순 정렬되어 있다. TreeMap으로 casting 하여 반환한다면
    *   pollLastEntry() 메소드로 큰 값부터 가져올 수 있다.
    *
    */
@@ -461,14 +381,6 @@ public class DBConnectionModule {
 
     return recommendList;
   }
-  @Test
-  public void testGetRecommendation()
-          throws UnavailableException, TException, InvalidRequestException, TimedOutException, CharacterCodingException {
-    String url = "http://en.wikipedia.org/wiki/$1_Money_Wars";
-    Map<Double, String> recommends = getRecommendation(url);
-
-    System.out.println(recommends.toString());
-  }
 
   /**
    *
@@ -493,10 +405,6 @@ public class DBConnectionModule {
       stmt.close();
     }
   }
-  @Test
-  public void testInsertUser() throws Exception {
-    insertUser("geunho.khim@gmail.com", "geunhokim", getConnection());
-  }
 
   /**
    *
@@ -507,7 +415,7 @@ public class DBConnectionModule {
    * @throws UnavailableException
    * @throws TimedOutException
    */
-  public void addUrlToUser(String userID, String url)
+  private void addUrlToUser(String userID, String url)
           throws TException, InvalidRequestException, UnsupportedEncodingException, UnavailableException, TimedOutException {
     Cassandra.Client client = thriftConnector.connect();
     String columnFamily = "User";
@@ -520,10 +428,6 @@ public class DBConnectionModule {
 
     client.insert(ByteBufferUtil.bytes(userID), columnParent, column, ConsistencyLevel.ONE);
   }
-  @Test
-  public void TestAddUrlToUser() throws UnavailableException, TException, InvalidRequestException, TimedOutException, UnsupportedEncodingException {
-    addUrlToUser("geunho.khim@gmail.com", "http://gmarket.co.kr");
-  }
 
   /**
    *
@@ -533,33 +437,28 @@ public class DBConnectionModule {
    *
    *  check if user info already exists before insert user cf
    */
-  public boolean isUserExist(String user_id, Connection conn) throws SQLException {
+  private boolean isUserExist(String user_id, Connection conn) throws SQLException {
     Statement stmt = null;
     ResultSet rs = null;
 
     try {
-    stmt = conn.createStatement();
-    String query = "select count(*) from \"User\" where key = '" + user_id + "';";
-    stmt.executeQuery(query);
-    rs = stmt.getResultSet();
+      stmt = conn.createStatement();
+      String query = "select count(*) from \"User\" where key = '" + user_id + "';";
+      stmt.executeQuery(query);
+      rs = stmt.getResultSet();
 
-    if(rs.getInt(1) == 1) {
-      return true;
+      if(rs.getInt(1) == 1) {
+        return true;
+      }
+
+    } catch (Exception e) {
+      e.printStackTrace();
     }
 
-  } catch (Exception e) {
-    e.printStackTrace();
-  }
+    rs.close();
+    stmt.close();
 
-  rs.close();
-  stmt.close();
-
-  return false;
-  }
-  @Test
-  public void testIsUserExist() throws Exception {
-    boolean isExist = isUserExist("geunho.khim@gmail.com", getConnection());
-    System.out.println(isExist);
+    return false;
   }
 
   /**
@@ -568,14 +467,15 @@ public class DBConnectionModule {
    * @throws  SQLException
    *
    *  update uptodate column in User cf. used in writeSticky method
-   * uptodate 컬럼의 데이터는 created::url::content 의 형식으로 저장된다. (초기 화면에서 이용할 때 '::' 로 스트링을 파싱한다.
+   * uptodate 컬럼의 데이터는 created::url::content 의 형식으로 저장된다. (초기 화면에서 이용할 때 '::' 로 스트링을 파싱한다.)
    */
   public void updateUptodate(String user_id, String user_name, long created, String url, String content, Connection conn) throws SQLException {
     Statement stmt = null;
 
     try {
       stmt = conn.createStatement();
-      String query = "update \"User\" set sticky_count = " +(getUserStickyCount(user_id, conn) + 1)+ ", uptodate = '" + created + "::" + url + "::" + user_name + "::" + content + "' where key = '" + user_id + "';";
+      String query = "update \"User\" set sticky_count = " +(getUserStickyCount(user_id, conn) + 1)+
+              ", uptodate = '" + created + "::" + url + "::" + user_name + "::" + content + "' where key = '" + user_id + "';";
       stmt.executeUpdate(query);
 
     } catch (Exception e) {
@@ -589,7 +489,7 @@ public class DBConnectionModule {
    *
    * @param   userID, conn
    * @return  user's sticky count
-   * @throws SQLException
+   * @throws  SQLException
    *
    *  used in updateUptodate method
    */
@@ -610,12 +510,6 @@ public class DBConnectionModule {
 
     return sticky_count;
   }
-  @Test
-  public void testGetUserStickyCount() throws Exception {
-    String userID = "geunho.khim@gmail.com";
-    int count = getUserStickyCount(userID, getConnection());
-    System.out.println(userID + "'s sticky count is: " + count);
-  }
 
   /**
    *
@@ -624,12 +518,11 @@ public class DBConnectionModule {
    * @throws  SQLException
    *
    *  get latest sticky of User cf. SOP 의 처음 페이지에서 사용된다.
-   * TODO: 속도가 느리므로 처음 로딩 화면에서 전부 불러온 후 화면을 구성하는 방법을 이용한다.
    */
   public Sticky getLatestSticky(String userID, Connection conn) throws SQLException {
     Statement stmt = null;
     Sticky sticky = null;
-    String uptodate = null;
+    String uptodate;
 
     try {
       stmt = conn.createStatement();
@@ -657,14 +550,6 @@ public class DBConnectionModule {
     sticky.setMemo(parsed[3]);
 
     return sticky;
-  }
-  @Test
-  public void testGetLatestSticky() throws Exception {
-    long start = System.currentTimeMillis();
-    Sticky sticky = getLatestSticky("geunho.khim@gmail.com", getConnection());
-
-    System.out.println("time spent: " + (float)(System.currentTimeMillis() - start) / 1000 + "s");
-    System.out.println(sticky.toString());
   }
 
   /**
@@ -694,12 +579,6 @@ public class DBConnectionModule {
     stmt.close();
 
     return count;
-  }
-  @Test
-  public void testGetURLStickyCount() throws Exception {
-    String url = "http://m.daum.net/";
-    int count = getURLStickyCount(url, getConnection());
-    System.out.println(url + "\n sticky count: " + count);
   }
 
 }

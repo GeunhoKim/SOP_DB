@@ -1,7 +1,5 @@
 package com.inha.stickyonpage.db;
 
-import org.junit.Test;
-
 import java.util.*;
 
 /**
@@ -12,7 +10,6 @@ import java.util.*;
 public class HelperClass {
 
   /**
-   *
    * @param   users, number of randoms
    * @return  list of random number of users
    */
@@ -41,33 +38,15 @@ public class HelperClass {
 
     return result;
   }
-  @Test
-  public void testGetRandFriends() {
-    int numRand = 5; // change here to test
-    List<String> users = new ArrayList<String>();
-    users.add("1234"); users.add("1235"); users.add("1236");
-    users.add("1237"); users.add("1238"); users.add("1239");
-    users.add("1240"); users.add("1241"); users.add("1242");
-
-    long start = System.currentTimeMillis();
-    List<String> randFriends = getRandFriends(users, numRand);
-
-    System.out.println("\ntime spent: " + (System.currentTimeMillis() - start) + "ms");
-    System.out.println("random users below: " + numRand);
-
-    for(String id : randFriends) {
-      System.out.println(id);
-    }
-  }
 
   /**
-   *
    * @param   stickies
    * @return  sorted stickies
    *
    *  sort stickies by 'like' column.
    */
   public static List<Sticky> sortStickyByLike(List<Sticky> stickies) {
+
     Collections.sort(stickies, new Comparator<Sticky>() {
       @Override
       public int compare(Sticky sticky, Sticky sticky2) {
