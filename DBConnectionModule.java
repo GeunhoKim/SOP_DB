@@ -302,7 +302,7 @@ public class DBConnectionModule {
 
   /**
    *
-   * @param user_id, f_id, url, connection
+   * @param  user_id, f_id, url, connection
    * @throws SQLException
    *
    *  Add preference to specific sticky, column like++ of Sticky CF.
@@ -630,4 +630,40 @@ public class DBConnectionModule {
     System.out.println("time spent: " + (float)(System.currentTimeMillis() - start) / 1000 + "s");
     System.out.println(sticky.toString());
   }
+
+  /**
+   *
+   * @param   url, conn
+   * @return  sticky count of url
+   * @throws  SQLException
+   *
+   *  get sticky_count column from URL cf
+   */
+  public int getURLStickyCount(String url, Connection conn) throws SQLException {
+    Statement stmt = null;
+    ResultSet rs = null;
+    int count = 0;
+
+    try {
+      stmt = conn.createStatement();
+      String query = "select sticky_count from \"URL\" where key = '" + url + "';";
+      rs = stmt.executeQuery(query);
+      count = rs.getInt(1);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    rs.close();
+    stmt.close();
+
+    return count;
+  }
+  @Test
+  public void testGetURLStickyCount() throws Exception {
+    String url = "http://m.daum.net/";
+    int count = getURLStickyCount(url, getConnection());
+    System.out.println(url + "\n sticky count: " + count);
+  }
+
 }
