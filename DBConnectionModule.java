@@ -336,7 +336,7 @@ public class DBConnectionModule {
     String query = "select like from \"Sticky\" where url = '" + url + "' and user_id = '" + userID + "' and created = " + created + ";";
     int likeCount = stmt.executeQuery(query).getInt(1);
     String updateQuery = "update \"Sticky\" set like = " + (likeCount + 1) +
-            " where url '" + url + "' and user_id = '" + userID + "' and created = " + created + ";";
+            " where url = '" + url + "' and user_id = '" + userID + "' and created = " + created + ";";
     stmt.executeUpdate(updateQuery);
   }
 
@@ -588,7 +588,7 @@ public class DBConnectionModule {
    * @throws  SQLException
    *
    *  get latest sticky of User cf. SOP 의 처음 페이지에서 사용된다.
-   * TODO: 속도가 느리므로 처음 로딩 화면에서 전부 불러온 후 화면을 구성하는 방법을 이용한다.
+   * TODO: 속도가 느리므로 처음 로딩 화면에서 전부 불러온 후 화면을 구성하는 방법을 이용한다. --> 한정된 랜덤수의 친구를 선별해 가져오기
    */
   public Sticky getLatestSticky(String userID, Connection conn) throws SQLException {
     Statement stmt = null;
