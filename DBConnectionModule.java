@@ -355,7 +355,8 @@ public class DBConnectionModule {
       countLike(url, user_id, created, stmt, conn);
 
       long ts = System.currentTimeMillis();
-      String query = "insert into \"Preference\"(user_id, f_id, url, created) values('" + user_id +"','"+ f_id + "','" + url + "','" + ts + "');";
+      String query = "insert into \"Preference\"(user_id, f_id, url, created) values('" + user_id +"','"+ f_id + "','" + url + "'," + ts + ");";
+      System.out.println(query);
       stmt.executeUpdate(query);
 
     } catch (SQLException e) {
@@ -368,9 +369,10 @@ public class DBConnectionModule {
   private void countLike(String url, String userID, long created, Statement stmt, Connection conn) throws SQLException {
 
     String query = "select like from \"Sticky\" where url = '" + url + "' and user_id = '" + userID + "' and created = " + created + ";";
+    System.out.println(query);
     int likeCount = stmt.executeQuery(query).getInt(1);
     String updateQuery = "update \"Sticky\" set like = " + (likeCount + 1) +
-            " where url '" + url + "' and user_id = '" + userID + "' and created = " + created + ";";
+            " where url = '" + url + "' and user_id = '" + userID + "' and created = " + created + ";";
     stmt.executeUpdate(updateQuery);
   }
 
