@@ -1,3 +1,5 @@
+package com.inha.stickyonpage.db;
+
 import org.junit.Test;
 
 import java.sql.Connection;
