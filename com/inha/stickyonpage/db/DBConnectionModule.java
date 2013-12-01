@@ -14,7 +14,7 @@ import java.util.Date;
 /**
  * @author  Geunho Khim
  * @created 10/11/13, 6:43 PM
- * @updated 11/28/13
+ * @updated 12/1/13
  *
  *  Cassandra database controller for Sticky On Page
  */
@@ -309,7 +309,7 @@ public class DBConnectionModule {
    *
    * @param   limit, connection
    * @return  list of URL
-   * @throws SQLException
+   * @throws  SQLException
    *
    *  get URL list limit (for test)
    */
@@ -408,12 +408,12 @@ public class DBConnectionModule {
 
   /**
    *
-   * @param userID, url
-   * @throws TException
-   * @throws InvalidRequestException
-   * @throws UnsupportedEncodingException
-   * @throws UnavailableException
-   * @throws TimedOutException
+   * @param   userID, url
+   * @throws  TException
+   * @throws  InvalidRequestException
+   * @throws  UnsupportedEncodingException
+   * @throws  UnavailableException
+   * @throws  TimedOutException
    */
   private void addUrlToUser(String userID, String url)
           throws TException, InvalidRequestException, UnsupportedEncodingException, UnavailableException, TimedOutException {
@@ -579,6 +579,32 @@ public class DBConnectionModule {
     stmt.close();
 
     return count;
+  }
+
+  /**
+   *
+   * @param   list of friends, conn
+   * @return  friend list who registered in User cf
+   * @throws  SQLException
+   *
+   *  get friends of Sticky On Page user.
+   *
+   *  usage:
+   *    friends = dbcm.getFriendOfSOPUser(friends, dbcm.getConnection());
+   *
+   *  method removes all non SOP user from parameter of friend list
+   */
+  public List<String> getFriendsOfSOPUser(List<String> friends, Connection conn) throws SQLException {
+    Iterator<String> it = friends.listIterator();
+
+    while(it.hasNext()) {
+      String user_id = it.next();
+      if(!isUserExist(user_id, conn)) { // if user does not exist,
+        it.remove();                    //+ remove that user from list
+      }
+    }
+
+    return friends;
   }
 
 }
