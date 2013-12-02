@@ -281,13 +281,14 @@ public class DBConnectionModule {
 
     try {
       stmt = conn.createStatement();
-      countLike(url, user_id, created, stmt, conn);
+      countLike(url, f_id, created, stmt, conn);
 
       long ts = System.currentTimeMillis();
       String query = "insert into \"Preference\"(user_id, f_id, url, created) values('" + user_id +"','"+ f_id + "','" + url + "'," + ts + ");";
       System.out.println(query);
-      stmt.executeUpdate(query);
-
+      int m = stmt.executeUpdate(query);
+      System.out.println("insert return value : "+m);
+      
     } catch (SQLException e) {
       e.printStackTrace();
     }
@@ -593,8 +594,8 @@ public class DBConnectionModule {
    *
    *  method removes all non SOP user from parameter of friend list
    */
-  public List<String> getFriendsOfSOPUser(List<String> friends, Connection conn) throws SQLException {
-    Iterator<String> it = friends.listIterator();
+  public HashSet<String> getFriendsOfSOPUser(HashSet<String> friends, Connection conn) throws SQLException {
+    Iterator<String> it = friends.iterator();
 
     while(it.hasNext()) {
       String user_id = it.next();
