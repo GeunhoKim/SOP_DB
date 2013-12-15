@@ -287,9 +287,10 @@ public class DBConnectionModule {
       stmt = conn.createStatement();
 
       // check if preference already exists
+      /*
       if(isPrefExist(user_id, f_id, url, stmt)) {
         return false;
-      }
+      } */
 
       // count like column in Sticky cf
       countLike(url, f_id, created, stmt);
@@ -326,6 +327,7 @@ public class DBConnectionModule {
             " where url = '" + url + "' and user_id = '" + userID + "' and created = " + created + ";";
     stmt.executeUpdate(updateQuery);
   }
+
 
   /**
    *
@@ -657,5 +659,48 @@ public class DBConnectionModule {
 
     return count;
   }
+
+  /**
+   *
+   * @param  user_id
+   * @return list of urls
+   * @throws TException
+   * @throws InvalidRequestException
+   * @throws UnavailableException
+   * @throws TimedOutException
+   * @throws CharacterCodingException
+   *
+   *  get urls that user wrote sticky
+   */
+  public List<String> getUsersURL(String user_id)
+          throws TException, InvalidRequestException, UnavailableException, TimedOutException, CharacterCodingException {
+    List<String> urls = new ArrayList<String>();
+    Cassandra.Client client = thriftConnector.connect();
+    ByteBuffer key = ByteBufferUtil.bytes(user_id);
+
+    SlicePredicate predicate = new SlicePredicate();
+    SliceRange sliceRange = new SliceRange();
+    sliceRange.setStart(new byte[0]);
+    sliceRange.setFinish(new byte[0]);
+    predicate.setSlice_range(sliceRange);
+
+    String columnFamily = "User";
+    ColumnParent parent = new ColumnParent(columnFamily);
+
+    List<ColumnOrSuperColumn> cols = client.get_slice(key, parent, predicate, ConsistencyLevel.ONE);
+
+    for (ColumnOrSuperColumn cosc : cols) {
+      Column column = cosc.column;
+      // (column name: url, value: empty)
+      if(ByteBufferUtil.string(column.value).equals("")) {
+        String url = ByteBufferUtil.string(column.name);
+
+        urls.add(url);
+      }
+    }
+
+    return urls;
+  }
+
 
 }
