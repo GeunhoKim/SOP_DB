@@ -14,7 +14,7 @@ import java.util.Date;
 /**
  * @author  Geunho Khim
  * @created 10/11/13, 6:43 PM
- * @updated 12/2/13
+ * @updated 12/15/13
  *
  *  Cassandra database controller for Sticky On Page
  */
@@ -110,6 +110,42 @@ public class DBConnectionModule {
               " where url = '" + url + "' and user_id = '" + userID + "' and created = " + created +";";
 
       stmt.executeUpdate(query);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    stmt.close();
+  }
+
+  /**
+   *
+   * @param   url, user_id, user_name, created, conn
+   * @throws  SQLException
+   *
+   *  delete sticky
+   *  1. URL.sticky_count--;
+   *  2. User.sticky_count--;
+   *  3. if(sticky == User.uptodate) User.uptodate == "";
+   *  4. delete sticky
+   *
+   */
+  public void deleteSticky(String url, String user_id, long created, Connection conn) throws SQLException {
+    Statement stmt = null;
+    Sticky sticky;
+    try {
+      stmt = conn.createStatement();
+
+      minusStickyCountUrl(url, stmt); // URL.sticky_count--;
+      minusStickyCountUser(user_id, stmt); // User.sticky_count--;
+      sticky = getLatestSticky(user_id, conn);
+
+      if((created == sticky.getTimestamp().getTime()) && (url.equals(sticky.getURL()))) {
+        deleteUptodate(user_id, stmt); // User.uptodate == "";
+      }
+
+      String query = "delete from \"Sticky\" where url = '" + url + "' and user_id = '" + user_id +"' and created = " + created + ";";
+      stmt.executeUpdate(query);
+
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -259,6 +295,16 @@ public class DBConnectionModule {
     }
 
     stmt.close();
+  }
+
+  // sticky_conut-- in URL cf
+  private void minusStickyCountUrl(String url, Statement stmt) throws SQLException {
+    try {
+      String query = "update \"URL\" set sticky_count = sticky_count - 1 where KEY = '" + url + "';";
+      stmt.executeUpdate(query);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
   /**
@@ -430,6 +476,11 @@ public class DBConnectionModule {
     }
   }
 
+  private void minusStickyCountUser(String user_id, Statement stmt) throws SQLException {
+    String query = "update \"User\" set sticky_count = " + (getUserStickyCount(user_id, stmt.getConnection()) - 1) + " where key = '" + user_id + "';";
+    stmt.executeUpdate(query);
+  }
+
   /**
    *
    * @param   userID, url
@@ -451,6 +502,27 @@ public class DBConnectionModule {
     column.setTimestamp(System.currentTimeMillis());
 
     client.insert(ByteBufferUtil.bytes(userID), columnParent, column, ConsistencyLevel.ONE);
+  }
+
+  /**
+   *
+   * @param user_id, url
+   * @throws TException
+   * @throws InvalidRequestException
+   * @throws UnavailableException
+   * @throws TimedOutException
+   *
+   *  note that there are no real deletion in Cassandra. remove is just tombstone writing.
+   */
+  public void deleteUrlFromUser(String user_id, String url)
+          throws TException, InvalidRequestException, UnavailableException, TimedOutException {
+    Cassandra.Client client = thriftConnector.connect();
+
+    ColumnPath columnPath = new ColumnPath();
+    columnPath.column_family = "User";
+    columnPath.column = ByteBufferUtil.bytes(url);
+
+    client.remove(ByteBufferUtil.bytes(user_id), columnPath, System.currentTimeMillis(), ConsistencyLevel.ALL);
   }
 
   /**
@@ -508,6 +580,17 @@ public class DBConnectionModule {
     stmt.close();
   }
 
+  private void deleteUptodate(String user_id, Statement stmt) {
+    try {
+      String query = "update \"User\" set uptodate = '' where key = '" + user_id + "';";
+      stmt.executeUpdate(query);
+
+    } catch  (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+
   /**
    *
    * @param   userID, conn
@@ -551,6 +634,10 @@ public class DBConnectionModule {
       stmt = conn.createStatement();
       String query = "select uptodate from \"User\" where key = '" + userID + "';";
       uptodate = stmt.executeQuery(query).getString(1);
+
+      if(uptodate.equals("")) {
+        return null; // becomes spaghetti code T_T
+      }
       sticky = parseUptodate(uptodate);
       sticky.setUser(userID);
 
